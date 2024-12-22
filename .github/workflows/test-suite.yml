@@ -1,0 +1,164 @@
+name: Test ❯ Suite
+
+on:
+  - workflow_dispatch
+  - push
+
+env:
+  preferred-elixir: "1.18.x"
+  preferred-otp: "27.x"
+  cache-version: 1
+  MIX_ENV: test
+
+concurrency:
+  group: test-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Testing
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang & Elixir
+        id: beam-versions
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.preferred-elixir }}
+          otp-version: ${{ env.preferred-otp }}
+
+      - name: Restore mix dependency installation cache
+        id: mix-deps-get-cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Install mix dependencies
+        if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+
+      - name: Restore mix dependency compilation cache
+        id: mix-deps-compile-cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Compile mix dependencies
+        if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'
+        run: mix deps.compile
+
+      - name: Run test suite
+        run: mix test
+
+  typecheck:
+    name: Typechecking
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang & Elixir
+        id: beam-versions
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.preferred-elixir }}
+          otp-version: ${{ env.preferred-otp }}
+
+      - name: Restore mix dependency installation cache
+        id: mix-deps-get-cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Install mix dependencies
+        if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+
+      - name: Restore mix dependency compilation cache
+        id: mix-deps-compile-cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Compile mix dependencies
+        if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'
+        run: mix deps.compile
+
+      - name: Restore mix typecheck cache
+        id: mix-typecheck-cache
+        uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-typecheck
+
+      - name: Setup typechecking
+        if: steps.mix-typecheck-cache.outputs.cache-hit != 'true'
+        run: mix typecheck.build-cache
+
+      - name: Run typecheck tasks
+        run: mix typecheck
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang & Elixir
+        id: beam-versions
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.preferred-elixir }}
+          otp-version: ${{ env.preferred-otp }}
+
+      - name: Restore mix dependency installation cache
+        id: mix-deps-get-cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-get-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Install mix dependencies
+        if: steps.mix-deps-get-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+
+      - name: Restore mix dependency compilation cache
+        id: mix-deps-compile-cache
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: cache-${{ env.cache-version }}-os-${{ runner.os }}-otp-${{ steps.beam-versions.outputs.otp-version }}-elixir-${{ steps.beam-versions.outputs.elixir-version }}-mix-deps-compile-mix-lock-file-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Compile mix dependencies
+        if: steps.mix-deps-compile-cache.outputs.cache-hit != 'true'
+        run: mix deps.compile
+
+      - name: Run linter tasks
+        run: mix lint
+        continue-on-error: true
+
+  results:
+    name: Test Suites Action Results
+    runs-on: ubuntu-20.04
+
+    if: ${{ always() }}
+    needs:
+      - test
+      - typecheck
+      - lint
+
+    steps:
+      - name: Test Suite Succeeded
+        if: ${{ needs.test.result == 'success' && needs.typecheck.result == 'success' && needs.lint.result == 'success' }}
+        run: exit 0
+
+      - name: Test Suite Failed
+        if: ${{ needs.test.result == 'failure' || needs.typecheck.result == 'failure' || needs.lint.result == 'failure' }}
+        run: exit 1
