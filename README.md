@@ -1,4 +1,4 @@
-# TaggedTupleShorthand
+# FieldPunning
 
 <!-- MODULEDOC BLURB -->
 
@@ -15,7 +15,7 @@
 
 ### Installation
 
-`TaggedTupleShorthand` is distributed via [hex.pm][hex-pm], you can install it with your dependency manager of choice using the config provided on its [hex.pm package][hex-pm-package] listing.
+`FieldPunning` is distributed via [hex.pm][hex-pm], you can install it with your dependency manager of choice using the config provided on its [hex.pm package][hex-pm-package] listing.
 
 <!-- MODULEDOC EXTRA -->
 <!--
@@ -25,12 +25,12 @@
 
 ### Formatting
 
-At time of writing, this library does not do any custom formatting, but that will likely change. To get support for it on release, you can add `:tagged_tuple_shorthand` to your formatter options' `:import_deps` today, ex:
+At time of writing, this library does not do any custom formatting, but that will likely change. To get support for it on release, you can add `:field_punning` to your formatter options' `:import_deps` today, ex:
 
 ```elixir
 # project/.formatter.exs
 [
-  import_deps: [:tagged_tuple_shorthand]
+  import_deps: [:field_punning]
 ]
 ```
 
@@ -64,9 +64,11 @@ At time of writing, `Credo` is reasonably upset by how we re-appropriate the mod
   rather than using markdown link references
 -->
 
-### Basic Usage
+`FieldPunning` overrides the `@` operator to accept a literal atom or string. This syntax can be used anywhere, but shouldn't be!
 
-`TaggedTupleShorthand` overrides the `@` operator to accept a literal atom or string, that turns into a tagged two-tuple variable reference at compile-time:
+### Generic Usage (bad)
+
+When you `@:field_pun`, it turns into a tagged two-tuple variable reference at compile-time:
 
 Form              | Expands To
 ------------------|-----------
@@ -76,9 +78,11 @@ Form              | Expands To
 `@^"string"`      | `{"string", ^string}`
 `@anything_else`  | Fallback to `Kernel.@/1`
 
+Due to limitations in the implementation, this syntax is valid anywhere:
+
 #### Examples
 
-    iex> use TaggedTupleShorthand
+    iex> use FieldPunning
     iex> foo = 1
     iex> @:foo
     {:foo, 1}
@@ -91,13 +95,13 @@ Form              | Expands To
     ** (MatchError) no match of right hand side value: {:foo, 3}
 
       
-This is not the most useful construct, until we start to use it in destructuring.
+Is this synax useful? No. Should you do this? Absolutely not! Except inside literal lists and maps: then, it becomes very handy for destructuring!
 
-### Field Punning Usage
+### Field Punning Usage (good)
 
 As it so happens, this tagged two-tuple variable reference shorthand expands at compile-time to AST that gives us field punning. Just use `@:atom` and `@"string"` when destructuring:
 
-    iex> use TaggedTupleShorthand
+    iex> use FieldPunning
     iex> destructure_map = fn %{@:foo, @"bar"} ->
     ...>   {foo, bar}
     ...> end
@@ -298,64 +302,64 @@ This particular macro for tagged two-tuple variable references gets us just that
 
 ## Supported Versions
 
-`TaggedTupleShorthand` is tested against many combinations of Elixir and OTP, and this syntax only works from Elixir v1.17.0 and onwards. Check the latest [test matrix run][test-matrix] to see if it will work for your combination.
+`FieldPunning` is tested against many combinations of Elixir and OTP, and this syntax only works from Elixir v1.17.0 and onwards. Check the latest [test matrix run][test-matrix] to see if it will work for your combination.
 
 <!-- LINKS & IMAGES -->
 
 <!-- Hex -->
 
 [hex-pm]: https://hex.pm
-[hex-pm-package]: https://hex.pm/packages/tagged_tuple_shorthand
-[hex-pm-versions]: https://hex.pm/packages/tagged_tuple_shorthand/versions
-[hex-pm-version-badge]: https://img.shields.io/hexpm/v/tagged_tuple_shorthand.svg?cacheSeconds=86400&style=flat-square
-[hex-pm-downloads-badge]: https://img.shields.io/hexpm/dt/tagged_tuple_shorthand.svg?cacheSeconds=86400&style=flat-square
+[hex-pm-package]: https://hex.pm/packages/field_punning
+[hex-pm-versions]: https://hex.pm/packages/field_punning/versions
+[hex-pm-version-badge]: https://img.shields.io/hexpm/v/field_punning.svg?cacheSeconds=86400&style=flat-square
+[hex-pm-downloads-badge]: https://img.shields.io/hexpm/dt/field_punning.svg?cacheSeconds=86400&style=flat-square
 [hex-pm-license-badge]: https://img.shields.io/badge/license-MIT-7D26CD.svg?cacheSeconds=86400&style=flat-square
 
 <!-- Docs -->
 
-[docs]: https://hexdocs.pm/tagged_tuple_shorthand/index.html
-<!-- [docs-guides]: https://hexdocs.pm/tagged_tuple_shorthand/usage.html#content -->
+[docs]: https://hexdocs.pm/field_punning/index.html
+<!-- [docs-guides]: https://hexdocs.pm/field_punning/usage.html#content -->
 [docs-badge]: https://img.shields.io/badge/documentation-online-purple?cacheSeconds=86400&style=flat-square
 
 <!-- Deps -->
 
-[deps]: https://hex.pm/packages/tagged_tuple_shorthand
+[deps]: https://hex.pm/packages/field_punning
 [deps-badge]: https://img.shields.io/badge/dependencies-0-blue?cacheSeconds=86400&style=flat-square
 
 <!-- Benchmarks -->
 
-<!-- [benchmarks]: https://christhekeele.github.io/tagged_tuple_shorthand/bench -->
+<!-- [benchmarks]: https://christhekeele.github.io/elixir_field_punning/bench -->
 <!-- [benchmarks-badge]: https://img.shields.io/badge/benchmarks-online-2ab8b5?cacheSeconds=86400&style=flat-square -->
 
 <!-- Contributors -->
 
-<!-- [contributors]: https://hexdocs.pm/tagged_tuple_shorthand/contributors.html -->
+<!-- [contributors]: https://hexdocs.pm/field_punning/contributors.html -->
 <!-- [contributors-badge]: https://img.shields.io/badge/contributors-%F0%9F%92%9C-lightgrey -->
 
 <!-- Status -->
 
-[suite]: https://github.com/christhekeele/tagged_tuple_shorthand/actions?query=workflow%3A%22Test+Suite%22
-<!-- [coverage]: https://coveralls.io/github/christhekeele/tagged_tuple_shorthand -->
+[suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22
+<!-- [coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning -->
 
 <!-- Release Status -->
 
-[release]: https://github.com/christhekeele/tagged_tuple_shorthand/tree/release
-[release-suite]: https://github.com/christhekeele/tagged_tuple_shorthand/actions?query=workflow%3A%22Test+Suite%22+branch%3Arelease
-[release-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/tagged_tuple_shorthand/test-suite.yml?branch=release&cacheSeconds=86400&style=flat-square
-<!-- [release-coverage]: https://coveralls.io/github/christhekeele/tagged_tuple_shorthand?branch=release -->
-<!-- [release-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/tagged_tuple_shorthand?branch=release&cacheSeconds=86400&style=flat-square -->
+[release]: https://github.com/christhekeele/elixir_field_punning/tree/release
+[release-suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22+branch%3Arelease
+[release-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/elixir_field_punning/test-suite.yml?branch=release&cacheSeconds=86400&style=flat-square
+<!-- [release-coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning?branch=release -->
+<!-- [release-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/elixir_field_punning?branch=release&cacheSeconds=86400&style=flat-square -->
 
 <!-- Latest Status -->
 
-[latest]: https://github.com/christhekeele/tagged_tuple_shorthand/tree/latest
-[latest-suite]: https://github.com/christhekeele/tagged_tuple_shorthand/actions?query=workflow%3A%22Test+Suite%22+branch%3Alatest
-[latest-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/tagged_tuple_shorthand/test-suite.yml?branch=latest&cacheSeconds=86400&style=flat-square
-<!-- [latest-coverage]: https://coveralls.io/github/christhekeele/tagged_tuple_shorthand?branch=latest -->
-<!-- [latest-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/tagged_tuple_shorthand?branch=latest&cacheSeconds=86400&style=flat-square -->
+[latest]: https://github.com/christhekeele/elixir_field_punning/tree/latest
+[latest-suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22+branch%3Alatest
+[latest-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/elixir_field_punning/test-suite.yml?branch=latest&cacheSeconds=86400&style=flat-square
+<!-- [latest-coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning?branch=latest -->
+<!-- [latest-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/elixir_field_punning?branch=latest&cacheSeconds=86400&style=flat-square -->
 
 <!-- Other -->
 
-<!-- [changelog]: https://hexdocs.pm/tagged_tuple_shorthand/changelog.html -->
-[test-matrix]: https://github.com/christhekeele/tagged_tuple_shorthand/actions/workflows/test-matrix.yml
-<!-- [test-edge]: https://github.com/christhekeele/tagged_tuple_shorthand/actions/workflows/test-edge.yml -->
-<!-- [contributing]: https://hexdocs.pm/tagged_tuple_shorthand/contributing.html -->
+<!-- [changelog]: https://hexdocs.pm/field_punning/changelog.html -->
+[test-matrix]: https://github.com/christhekeele/elixir_field_punning/actions/workflows/test-matrix.yml
+<!-- [test-edge]: https://github.com/christhekeele/field_punning/actions/workflows/test-edge.yml -->
+<!-- [contributing]: https://hexdocs.pm/field_punning/contributing.html -->

@@ -1,22 +1,22 @@
-defmodule TaggedTupleShorthand.MixProject do
+defmodule FieldPunning.MixProject do
   use Mix.Project
 
   @version "VERSION" |> File.read!() |> String.trim()
   @erlang_version :otp_release |> :erlang.system_info() |> List.to_string() |> String.to_integer()
 
-  @name "TaggedTupleShorthand"
+  @name "FieldPunning"
   @description "Field punning for Elixir via a tagged 2-tuple variable reference macro"
   @authors ["Chris Keele"]
   @maintainers ["Chris Keele"]
   @licenses ["MIT"]
-  @github_url "https://github.com/christhekeele/tagged_tuple_shorthand"
+  @github_url "https://github.com/christhekeele/elixir_field_punning"
   @homepage_url @github_url
   @release_branch "release"
   @dev_envs [:dev, :test]
 
   def project do
     [
-      app: :tagged_tuple_shorthand,
+      app: :field_punning,
       version: @version,
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
@@ -120,7 +120,7 @@ defmodule TaggedTupleShorthand.MixProject do
       source_ref: @release_branch,
       source_url: @github_url,
       homepage_url: @homepage_url,
-      main: "TaggedTupleShorthand",
+      main: "FieldPunning",
       markdown_processor: {ExDoc.Markdown.Earmark, gfm_tables: true, sub_sup: true}
     ]
 

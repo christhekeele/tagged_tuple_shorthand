@@ -1,4 +1,4 @@
-defmodule TaggedTupleShorthand do
+defmodule FieldPunning do
   @readme "README.md"
   @external_resource @readme
   @readme_blurb @readme
@@ -21,14 +21,14 @@ defmodule TaggedTupleShorthand do
   @moduledoc """
   #{@readme_blurb}
 
-  > #### `use TaggedTupleShorthand` {: .info}
+  > #### `use FieldPunning` {: .info}
   >
-  > When you `use TaggedTupleShorthand`, you are replacing `Kernel.@/1` with:
-  > - an overloaded `TaggedTupleShorthand.@/1` implementation
+  > When you `use FieldPunning`, you are replacing `Kernel.@/1` with:
+  > - an overloaded `FieldPunning.@/1` implementation
   > - that supports `@:atom` and `@"string"` tagged tuple variable references
   > - and otherwise falls back to normal `@module_attribute` semantics
 
-  ## Field Punning
+  ## About Field Punning
 
   #{@readme_about}
 
@@ -45,7 +45,7 @@ defmodule TaggedTupleShorthand do
   defmacro __using__(_ \\ []) do
     quote do
       import Kernel, except: [@: 1]
-      import TaggedTupleShorthand, only: [@: 1]
+      import FieldPunning, only: [@: 1]
     end
   end
 
@@ -64,7 +64,7 @@ defmodule TaggedTupleShorthand do
 
   ## Examples
 
-      iex> use TaggedTupleShorthand
+      iex> use FieldPunning
       iex> foo = 1
       iex> @:foo
       {:foo, 1}
@@ -78,9 +78,9 @@ defmodule TaggedTupleShorthand do
 
   Intended to be used in pattern matching constructs to enable field punning,
   see the module documentation for an explanation of
-  [field punning](https://hexdocs.pm/tagged_tuple_shorthand/TaggedTupleShorthand.html#module-field-punning)
+  [field punning](https://hexdocs.pm/field_punning/FieldPunning.html#module-field-punning)
   and its
-  [intended usage](https://hexdocs.pm/tagged_tuple_shorthand/TaggedTupleShorthand.html#module-field-punning-usage).
+  [intended usage](https://hexdocs.pm/field_punning/FieldPunning.html#module-field-punning-usage).
 
   """
   defmacro @literal

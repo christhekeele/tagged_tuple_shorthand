@@ -17,7 +17,7 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-tagged_tuple_shorthand-*.tar
+field_punning-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/

@@ -1,7 +1,7 @@
-defmodule TaggedTupleShorthandTest do
+defmodule FieldPunningTest do
   use ExUnit.Case
-  doctest TaggedTupleShorthand
-  use TaggedTupleShorthand
+  doctest FieldPunning
+  use FieldPunning
 
   test "basic usage" do
     {foo, bar, baz} = {1, 2, 3}
