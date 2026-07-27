@@ -1,10 +1,10 @@
 # FieldPunning
 
-<!-- MODULEDOC BLURB -->
+<!-- README BLURB -->
 
-> **_Field punning in Elixir via a shorthand for constructing tagged two-tuple variable references._**
+> **_[Field punning](https://field_punning.hexdocs.pm/FieldPunning.html#module-background) syntax sugar for Elixir: shorthand key/value variable assignment and pattern matching._**
 
-<!-- MODULEDOC BLURB -->
+<!-- README BLURB -->
 
 [![Version][hex-pm-version-badge]][hex-pm-versions]
 [![Documentation][docs-badge]][docs]
@@ -15,31 +15,163 @@
 
 ### Installation
 
-`FieldPunning` is distributed via [hex.pm][hex-pm], you can install it with your dependency manager of choice using the config provided on its [hex.pm package][hex-pm-package] listing.
+`FieldPunning` is distributed via [hex.pm][hex-pm].
 
-<!-- MODULEDOC EXTRA -->
+You can add it to your mix project's dependencies by modifying your `mix.exs`:
+
+```elixir
+def deps do
+  [
+    # ...
+    {:field_punning, "~> 0.1", runtime: false},
+    # ...
+  ]
+end
+```
+
+In scripting projects like in [`IEx`](https://iex.hexdocs.pm) or [`Livebook`s](https://livebook.hexdocs.pm), you can add it to your `Mix.install/2` invocations:
+
+```elixir
+Mix.install([
+  # ...
+  {:field_punning, "~> 0.1", runtime: false},
+  # ...
+])
+```
+
+<!-- README SETUP -->
 <!--
-  all hyperlinks within this snippet must be inline,
-  rather than using markdown link references
+  all hyperlinks within this snippet must be inline
 -->
 
 ### Formatting
 
-At time of writing, this library does not do any custom formatting, but that will likely change. To get support for it on release, you can add `:field_punning` to your formatter options' `:import_deps` today, ex:
+<!-- README FORMATTER INSTRUCTIONS -->
+<!--
+  all hyperlinks within this snippet must be inline
+-->
+
+`FieldPunning` comes with a formatter. To automatically re-write valid field puns within map/list literals to `FieldPunning.@/1` notation (and prevent abuse of the syntax elsewhere), add `FieldPunning.Formatter` to your list of formatter plugins:
 
 ```elixir
-# project/.formatter.exs
+# .formatter.exs
 [
-  import_deps: [:field_punning]
+  plugins: [
+    FieldPunning.Formatter
+  ],
+  field_punning: [
+    reorder_puns_in_maps?: false | true
+  ]
 ]
 ```
+
+<!-- README FORMATTER INSTRUCTIONS -->
+
+#### Options
+
+All options to this library are provided as keywords to the `:field_punning` key:
+
+<!-- README FORMATTER OPTIONS -->
+
+- `:reorder_puns_in_maps?`
+  - `false` _(default)_:
+    Do not place field puns first in maps. May cause a change to `=>` syntax in atom keys of existing maps, see the limitations below.
+  - `true`:
+    Automatically place field puns first in maps. May cause reordering of existing maps.
+
+<!-- README FORMATTER OPTIONS -->
+
+#### Limitations
+
+These are the known limitations of the formatter, that stem from how it interacts with Elixir's default syntax sugar formatting rules. They are warts that would hopefully be fixed with actual language adoption.
+
+1. **_Implicit trailing `Keyword` args list literals with puns are made explicit._**
+
+   Normally, a trailing `Keyword` list in a function call can omit the list literal brackets:
+
+   ```elixir
+   fizzbuzz(foo: foo)
+   ```
+
+   Pun formatting rewrites this with an explicit list literal:
+
+   ```elixir
+   fizzbuzz([@:foo])
+   ```
+
+2. **_`Keyword` trailing-colon atom key/value pair syntax may shift to use tuples._**
+
+   There is a syntax sugar for atom keys in `Keyword` pairs, such that they can leave the atom's colon on the right side to indicate pairing as shorthand for an `Atom` two-tuple:
+
+   ```elixir
+   [
+     this: that,
+     unity: unity,
+     here: there,
+   ]
+   ```
+
+   When a pun interrupts this flow, formatting forces the prior pairs back to two-tuple syntax:
+
+   ```elixir
+   [
+     {:this, that},
+     @:unity,
+     here: there
+   ]
+   ```
+
+3. **_`Map` trailing-colon atom key/value pair syntax may shift to use arrows._**
+
+   Similar to the problem above with `Keyword` lists, `Map`s use an atom shorthand for key/value association:
+
+   ```elixir
+   %{
+     this: that,
+     unity: unity,
+     here: there
+   }
+   ```
+
+   When a pun interrupts this flow, earlier fields are rewritten to use the full `Map` association arrow syntax (`=>`):
+
+   ```elixir
+   %{
+     :this => that,
+     @:unity,
+     here: there
+   }
+   ```
+
+   To prevent this, the formatter provides an opt-in option to promote field puns earlier in the `Map`, since unlike a `Keyword`, they are not order-dependent.
+
+   With these settings:
+
+   ```elixir
+   # .formatter.exs
+   [
+     field_punning: [
+       reorder_puns_in_maps?: true
+     ]
+   ]
+   ```
+
+   The formatter will instead reorder the field puns first, preserving trailing-colon syntax sugar, producing:
+
+   ```elixir
+   %{
+     @:unity,
+     this: that,
+     here: there
+   }
+   ```
 
 ### Linting
 
 At time of writing, `Credo` is reasonably upset by how we re-appropriate the module attribute operator. We may offer a replacement check in the future, but for now you should disable the `Credo.Check.Readability.ModuleAttributeNames` check in your configuration, ex:
 
 ```elixir
-# project/.credo.exs
+# .credo.exs
 %{
   configs: [
     %{
@@ -54,62 +186,103 @@ At time of writing, `Credo` is reasonably upset by how we re-appropriate the mod
 }
 ```
 
-<!-- MODULEDOC EXTRA -->
+<!-- README SETUP -->
 
 ## Usage
 
-<!-- MODULEDOC USAGE -->
+<!-- README USAGE -->
 <!--
-  all hyperlinks within this snippet must be inline,
-  rather than using markdown link references
+  all hyperlinks within this snippet must be inline
 -->
 
-`FieldPunning` overrides the `@` operator to accept a literal atom or string. This syntax can be used anywhere, but shouldn't be!
+`use FieldPunning` overrides the `@` operator to accept a literal atom or string. When used this way inside `Keyword`/`Map` literals, it acts as [a "field pun"](https://field_punning.hexdocs.pm/FieldPunning.html#module-background).
 
-### Generic Usage (bad)
-
-When you `@:field_pun`, it turns into a tagged two-tuple variable reference at compile-time:
-
-Form              | Expands To
-------------------|-----------
-`@:atom`          | `{:atom, atom}`
-`@^:atom`         | `{:atom, ^atom}`
-`@"string"`       | `{"string", string}`
-`@^"string"`      | `{"string", ^string}`
-`@anything_else`  | Fallback to `Kernel.@/1`
-
-Due to limitations in the implementation, this syntax is valid anywhere:
-
-#### Examples
+Field punning can be used to construct literal `Keyword`/`Map` pairs from variables in scope:
 
     iex> use FieldPunning
-    iex> foo = 1
-    iex> @:foo
-    {:foo, 1}
-    iex> @:foo = {:foo, 2}
-    {:foo, 2}
-    iex> foo
-    2
-    iex> @^:foo = {:foo, 2}
-    iex> @^:foo = {:foo, 3}
-    ** (MatchError) no match of right hand side value: {:foo, 3}
+    iex> {foo, bar, baz} = {1, 2, nil}
+    iex>
+    iex> # Shorthand for:
+    iex> # list = [:fizzbuzz, {"foo", foo}, bar: bar]
+    iex> list = [:fizzbuzz, @"foo", @:bar]
+    iex> list
+    [:fizzbuzz, {"foo", 1}, {:bar, 2}]
+    iex>
+    iex> # Shorthand for:
+    iex> # map = %{"foo" => foo, bar: bar, baz: baz}
+    iex> map = %{@"foo", @:bar, @:baz}
+    iex> map
+    %{:bar => 2, :baz => nil, "foo" => 1}
+    iex>
+    iex> baz = 3
+    iex> # Shorthand for:
+    iex> # %{map | baz: baz}
+    iex> %{map | @:baz}
+    %{:bar => 2, :baz => 3, "foo" => 1}
 
-      
-Is this synax useful? No. Should you do this? Absolutely not! Except inside literal lists and maps: then, it becomes very handy for destructuring!
-
-### Field Punning Usage (good)
-
-As it so happens, this tagged two-tuple variable reference shorthand expands at compile-time to AST that gives us field punning. Just use `@:atom` and `@"string"` when destructuring:
+Field punning works in pattern matching, assigning to a variable of the same name as the provided `Atom`/`String` key:
 
     iex> use FieldPunning
-    iex> destructure_map = fn %{@:foo, @"bar"} ->
+    iex> list = [{"foo", 1}, bar: 2]
+    iex> map = %{"fizz" => 3, buzz: 4}
+    iex>
+    iex> # Shorthand for:
+    iex> # [{"foo", foo}, bar: bar] = list
+    iex> [@"foo", @:bar] = list
+    iex> {foo, bar}
+    {1, 2}
+    iex>
+    iex> # Shorthand for:
+    iex> # %{"fizz" => fizz, buzz: buzz} = map
+    iex> %{@"fizz", @:buzz} = map
+    iex> {fizz, buzz}
+    {3, 4}
+
+This syntax works inside function heads, `case`s, and all other pattern matching constructs to concisely declare variables from named key/value pairs received as arguments:
+
+    iex> use FieldPunning
+    iex> map = %{"foo" => 1, bar: 2}
+    iex>
+    iex> # Shorthand for:
+    iex> # destructure_map = fn %{"foo" => foo, bar: bar} ->
+    iex> #   {foo, bar}
+    iex> # end
+    iex> destructure_map = fn %{@"foo", @:bar} ->
     ...>   {foo, bar}
     ...> end
-    iex> map = %{"bar" => 2, foo: 1}
     iex> destructure_map.(map)
     {1, 2}
+    iex>
+    iex> # Shorthand for:
+    iex> # case map do
+    iex> #   %{"foo" => foo, bar: bar} ->
+    iex> #     {foo, bar}
+    iex> # end
+    iex> case map do
+    ...>   %{@"foo", @:bar} -> {foo, bar}
+    ...> end
+    {1, 2}
 
-Some more realistic examples:
+Field punning is a syntax sugar that targets repetition to provide visual clarity and reduce typos. As such, it provides no sugar for other pattern matching constructs like the variable pinning (`^`) and ignore-unused-variables (`_`) syntaxes.
+
+This keeps attention focused on these intentional expressions of programmer intent, only streamlining the cases where the programmer was compelled to provide a variable name without any additional semantics:
+
+    iex> use FieldPunning
+    iex> map = %{"foo" => 1, bar: 2, baz: 3}
+    iex> bar = 2
+    iex>
+    iex> # Not eligible for field punning, to call attention
+    iex> # to noteworthy semantic decisions:
+    iex> case map do
+    iex>   %{
+    ...>     "foo" => something_foo, # Noteworthy: a more explanatory variable was chosen
+    ...>     bar: ^bar, # Noteworthy: a variable match is being asserted
+    ...>     baz: _baz, # Noteworthy: the value of baz is not useful in this context, just the key
+    ...>   } ->
+    ...>     {something_foo, bar}
+    ...> end
+
+### Real-World Examples
 
 #### In Phoenix Channels
 
@@ -153,6 +326,8 @@ Diff:
      when is_binary(chat) do...
 ```
 
+The resulting version is much more concise and less error-prone to typos around parameter names.
+
 #### In Phoenix Controller Actions
 
 [Before](https://github.com/fly-apps/live_beats/blob/ac9780472e7019af274110a1cf71250a8d40c986/lib/live_beats_web/controllers/file_controller.ex#L11-L20):
@@ -175,7 +350,7 @@ After:
 ```elixir
 def show(conn, %{@"id", @"token"}) do
   case Phoenix.Token.decrypt(conn, "file", token, max_age: :timer.minutes(1)) do
-    {:ok, %{@^:id, vsn: 1, size: _size}} ->
+    {:ok, %{id: ^id, vsn: 1, size: _size}} ->
      path = MediaLibrary.local_filepath(id)
      do_send_file(conn, path)
 
@@ -191,20 +366,68 @@ Diff:
 -def show(conn, %{"id" => id, "token" => token}) do
 +def show(conn, %{@"id", @"token"}) do
    case Phoenix.Token.decrypt(conn, "file", token, max_age: :timer.minutes(1)) do
--    {:ok, %{id: ^id, vsn: 1, size: _size}} ->
-+    {:ok, %{@^:id, vsn: 1, size: _size}} ->
+    {:ok, %{id: ^id, vsn: 1, size: _size}} ->
       path = MediaLibrary.local_filepath(id)
       do_send_file(conn, path)
+
+    _ ->
+      send_resp(conn, :unauthorized, "")
+  end
+end
 ```
 
-<!-- MODULEDOC USAGE -->
+Notice that in pattern matching on the return value of `Phoenix.Token.decrypt/4`, none of the fields are eligable for field punning. Only the normal, boring params destructuring is terser, and now demands less of our attention when parsing the semantics of this code, so we are more likely to notice the interesting decisions in the later pattern match.
 
-## Motivation
+<!-- README USAGE -->
 
-<!-- MODULEDOC ABOUT -->
+## Implementation
+
+<!-- README IMPL -->
+
+When you `@:field_pun`, it turns into a tagged two-tuple variable reference at compile-time:
+
+| Form             | Expands To                                                            |
+| ---------------- | --------------------------------------------------------------------- |
+| `@:atom`         | `{:atom, atom}`                                                       |
+| `@"string"`      | `{"string", string}`                                                  |
+| `@anything_else` | [Fallback to `Kernel.@/1`](https://elixir.hexdocs.pm/Kernel.html#@/1) |
+
+Due to limitations in the implementation, this syntax can be used valid anywhere, though it probably shouldn't be:
+
+#### Examples
+
+    iex> use FieldPunning
+    iex> foo = 1
+    iex> @:foo
+    {:foo, 1}
+    iex> @:foo = {:foo, 2}
+    {:foo, 2}
+    iex> foo
+    2
+
+Is this synax useful? No. Should you do this? Absolutely not! Except inside literal lists and maps: then, it becomes very handy for destructuring!
+
+In general, [using the `FieldPunning.Formatter`](https://field_punning.hexdocs.pm/FieldPunning.html#module-formatting) in your project will prevent against this sort of usage.
+
+### Why the module attribute operator (`@`)?
+
+Several reasons.
+
+- It one of a few overridable unary macros in Elixir's syntax.
+  - `+`, `-`, `!`, and `not` would be confusing for this macro to use.
+  - `&` and `^` might work for this purpose, but they are special forms and cannot be overriden without compiler changes.
+  - `...` is available, but has problematically low operator precedence.
+  - `@` is in general the highest-precedence operator, eliminating many syntactical edge cases.
+  - Most critically, `@` is the only unary operator today whose use with string/atom literals raises a compile-time error, ensuring that existing compiling programs are not using it this way already, and can adopt this library freely.
+- The current purpose of `@` (to read and write module attributes) is somewhat sympathetic with field punning (both are compile-time conceits that interact with variables in scope to insert literals into code that reduce duplication).
+
+<!-- README IMPL -->
+
+## Background
+
+<!-- README ABOUT -->
 <!--
-  all hyperlinks within this snippet must be inline,
-  rather than using markdown link references
+  all hyperlinks within this snippet must be inline
 -->
 
 What is field punning? It's a common form of syntactic sugar you may already be familiar with from other languages. It goes by many names:
@@ -216,7 +439,7 @@ What is field punning? It's a common form of syntactic sugar you may already be 
 
 We'll stick with "field punning" throughout this explanation.
 
-### Background
+### Motivation
 
 We often use `Keyword` lists and `Map`s to associate values with a given key:
 
@@ -234,7 +457,7 @@ map[:fizz] #=> 3
 map.buzz #=> 4
 ```
 
-If we're interested in a value, we are probably going to assign it to a variable. What's a good name for that variable? 94% of the time[‡](https://en.wikipedia.org/wiki/Citation_needed), the key itself makes for a fine variable name:
+If we're interested in a value, we are probably going to assign it to a variable. What's a good name for that variable? 94% of the time[‡](https://en.wikipedia.org/wiki/Citation_needed), the key name itself makes for a fine variable name:
 
 ```elixir
 foo = Keyword.get(list, :foo)
@@ -254,7 +477,9 @@ fizz #=> 3
 buzz #=> 4
 ```
 
-This begs the question: if this is so common, ***why do we have to type out the same name twice***, *once to name the key, and again to name the variable*, when destructuring?
+This begs the question: if this is so common, **_why do we have to type out the same name twice_**, _once to name the key, and again to name the variable_, when destructuring?
+
+Syntax sugar to reduce the duplication is called "field punning".
 
 #### In Javascript
 
@@ -268,6 +493,8 @@ foo //=> 1
 bar //=> 2
 ```
 
+Objects use strings as keys and colon/quote syntax interchangeably, and this syntax does not work in arrays, so barewords syntax is the perfect lowest common denomniator for this language.
+
 #### In Ruby
 
 You can do this destructuring of key/value pairs into matching variable names by pattern matching into a "keywords" style hash literal:
@@ -280,25 +507,38 @@ foo #=> 1
 bar #=> 2
 ```
 
+Hashes can use atoms or strings as keys and this syntax only supports atoms, but as atoms in Ruby are garbage collected atom keys are fairly ubiquitous for this purpose, making atom literals a good choice for this shorthand.
+
 #### Benefits
 
-That is what *field punning* is: ***a short-hand syntactic sugar for deconstruction of key/value pairs in associative data structures, interacting with variable names in the current scope***. It is popular for several reasons:
+That is what _field punning_ is: **_a short-hand syntactic sugar for deconstruction and construction of key/value pairs in associative data structures, interacting with variable names in the current scope_**. It is popular for several reasons:
 
 - This syntax saves on visual noise, expressing destructuring key/value data tersely in the common case of the key making for a sufficient variable name.
-- This syntax calls attention to the cases where we are intentionally *not* re-using the key as a variable name, placing emphasis on a subtle decision a developer decided was important for readability or understanding.
+- This syntax calls attention to the cases where we are intentionally _not_ re-using the key as a variable name, placing emphasis on a subtle decision a developer decided was important for readability or understanding.
 - This syntax prevents common typos, and ensures that variable names match keys throughout refactors when that is the desired behaviour.
 
 #### In Elixir
 
-An Elixir implementation of field punning has to work in several more scenarios than other languages, since:
+Any Elixir implementation of field punning has to work in several more scenarios than other languages, since:
 
-- We have two different common associative data structures, `Keyword` lists and `Map`s
-- We have two different common key types, `Atom`s and `String`s
-- We have two different common syntaxes for key/value associativity, `arbitrary => value` (maps only) and `atom: value` (atom keys only)
+- We have two different common key types:
+  - `Atom`s
+  - `String`s
+- We have two different common associative data structures:
+  - `Keyword` lists are just a syntax convention around normal lists, which don't have to be composed fully of key/value pairs
+  - `Map` datastructures must be composed fully of key/value pairs
+- We have two different syntaxes for key/value associativity:
+  - `arbitrary => value` (maps only)
+  - `{arbitrary, value}` (keywords only)
+  - With `atom: value` syntax sugar supported for both (atom keys only)
+- We have two different syntax contexts for interpreting data structure literals:
+  - pattern matching
+  - normal lexical scope
+- We have an existing data structure literal (tuples) that would be one character away syntactically (`%`) from being a valid map if we implemented field punning with a "barewords" style.
 
-This particular macro for tagged two-tuple variable references gets us just that.
+The `FieldPunning.@/1` macro lets us thread the needle of these concerns with a decently terse syntax that supports all possible usecases.
 
-<!-- MODULEDOC ABOUT -->
+<!-- README ABOUT -->
 
 ## Supported Versions
 
@@ -317,49 +557,10 @@ This particular macro for tagged two-tuple variable references gets us just that
 
 <!-- Docs -->
 
-[docs]: https://hexdocs.pm/field_punning/index.html
-<!-- [docs-guides]: https://hexdocs.pm/field_punning/usage.html#content -->
+[docs]: https://field_punning.hexdocs.pm/index.html
 [docs-badge]: https://img.shields.io/badge/documentation-online-purple?cacheSeconds=86400&style=flat-square
 
 <!-- Deps -->
 
 [deps]: https://hex.pm/packages/field_punning
 [deps-badge]: https://img.shields.io/badge/dependencies-0-blue?cacheSeconds=86400&style=flat-square
-
-<!-- Benchmarks -->
-
-<!-- [benchmarks]: https://christhekeele.github.io/elixir_field_punning/bench -->
-<!-- [benchmarks-badge]: https://img.shields.io/badge/benchmarks-online-2ab8b5?cacheSeconds=86400&style=flat-square -->
-
-<!-- Contributors -->
-
-<!-- [contributors]: https://hexdocs.pm/field_punning/contributors.html -->
-<!-- [contributors-badge]: https://img.shields.io/badge/contributors-%F0%9F%92%9C-lightgrey -->
-
-<!-- Status -->
-
-[suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22
-<!-- [coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning -->
-
-<!-- Release Status -->
-
-[release]: https://github.com/christhekeele/elixir_field_punning/tree/release
-[release-suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22+branch%3Arelease
-[release-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/elixir_field_punning/test-suite.yml?branch=release&cacheSeconds=86400&style=flat-square
-<!-- [release-coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning?branch=release -->
-<!-- [release-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/elixir_field_punning?branch=release&cacheSeconds=86400&style=flat-square -->
-
-<!-- Latest Status -->
-
-[latest]: https://github.com/christhekeele/elixir_field_punning/tree/latest
-[latest-suite]: https://github.com/christhekeele/elixir_field_punning/actions?query=workflow%3A%22Test+Suite%22+branch%3Alatest
-[latest-suite-badge]: https://img.shields.io/github/actions/workflow/status/christhekeele/elixir_field_punning/test-suite.yml?branch=latest&cacheSeconds=86400&style=flat-square
-<!-- [latest-coverage]: https://coveralls.io/github/christhekeele/elixir_field_punning?branch=latest -->
-<!-- [latest-coverage-badge]: https://img.shields.io/coverallsCoverage/github/christhekeele/elixir_field_punning?branch=latest&cacheSeconds=86400&style=flat-square -->
-
-<!-- Other -->
-
-<!-- [changelog]: https://hexdocs.pm/field_punning/changelog.html -->
-[test-matrix]: https://github.com/christhekeele/elixir_field_punning/actions/workflows/test-matrix.yml
-<!-- [test-edge]: https://github.com/christhekeele/field_punning/actions/workflows/test-edge.yml -->
-<!-- [contributing]: https://hexdocs.pm/field_punning/contributing.html -->

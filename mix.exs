@@ -31,7 +31,8 @@ defmodule FieldPunning.MixProject do
       deps: deps(),
       dialyzer: dialyzer(),
       docs: docs(),
-      package: package()
+      package: package(),
+      test_ignore_filters: [&String.starts_with?(&1, "test/fixtures/")]
     ]
   end
 
@@ -57,10 +58,13 @@ defmodule FieldPunning.MixProject do
 
   defp deps,
     do: [
+      # Optional end-user tooling
+      {:igniter, "~> 0.5", optional: true},
+      # Project development tooling
       {:ex_doc, "~> 0.29", only: [:dev], runtime: false},
       {:makeup_diff, ">= 0.0.0", only: [:dev], runtime: false},
       {:credo, "~> 1.0", only: [:test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:test], runtime: false}
     ]
 
   defp aliases,
